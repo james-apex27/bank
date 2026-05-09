@@ -1,9 +1,12 @@
 import sqlite3
 import random
+import os
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 
-DB_PATH = 'bank.db'
+# Absolute path so the DB is always next to database.py regardless of
+# the working directory (important for PythonAnywhere / WSGI servers).
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bank.db')
 
 
 def get_db():
