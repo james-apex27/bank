@@ -83,6 +83,53 @@
 </div>
 {% endif %}
 
+<!-- About Panel -->
+<div class="mt-5 mb-2">
+  <a class="text-muted text-decoration-none small d-inline-flex align-items-center gap-1"
+     data-bs-toggle="collapse" href="#aboutPanel" role="button">
+    <i class="bi bi-info-circle"></i> About Bank of Apex27
+    <i class="bi bi-chevron-down" style="font-size:.75em;"></i>
+  </a>
+</div>
+<div class="collapse" id="aboutPanel">
+  <div class="card shadow-sm border-0 mb-4">
+    <div class="card-body p-4" style="max-width: 860px;">
+      <h5 class="fw-semibold mb-3"><i class="bi bi-bank2 me-2 text-primary"></i>What is Bank of Apex27?</h5>
+      <p class="mb-3">
+        Bank of Apex27 is a self-contained bank simulator built specifically for testing Apex27's bank file
+        import and export features. Rather than connecting to a real bank during development and testing,
+        you can create fictional bank accounts here, populate them with transactions that mimic real-world
+        activity — rent payments, holding deposits, security deposits, refunds — and generate the exact
+        file formats that Apex27 expects to receive.
+      </p>
+      <p class="mb-3">
+        Each account is assigned a randomly generated sort code and account number and is tied to one of
+        three supported bank formats: <strong>Barclays</strong>, <strong>NatWest</strong>, or
+        <strong>Sage</strong>. The bank type determines the CSV structure used when exporting a statement,
+        ensuring the file Apex27 imports matches the format it has been configured to handle for that bank.
+        Transactions can be added manually with a date, description, amount, reference, and type — giving
+        you full control over the test data without needing a live banking connection.
+      </p>
+      <p class="mb-3">
+        The export system tracks which transactions have already been sent to Apex27. Each time you download
+        a statement, only the new, un-exported transactions are included, and they are automatically marked
+        as exported afterwards. This mirrors how a real bank feed works, allowing you to test incremental
+        imports rather than re-importing the same data every time. Individual transactions can be reset if
+        you need to re-run a specific test.
+      </p>
+      <p class="mb-0">
+        The simulator also supports the reverse flow. When Apex27 generates a BACS payment file — for
+        example, to pay out to landlords — you can upload that file here via the
+        <a href="{{ url_for('import_bacs') }}">Import BACS</a> page. The simulator will match each payment
+        row to the corresponding account by sort code and account number and apply the transaction
+        automatically. Any rows that do not match an existing account are shown separately so you can
+        identify gaps in your test setup. Together, these two flows let you verify the complete round-trip:
+        money coming in to Apex27 via statement import, and money going out via BACS export.
+      </p>
+    </div>
+  </div>
+</div>
+
 <!-- Create Account Modal -->
 <div class="modal fade" id="createModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
