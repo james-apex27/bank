@@ -1,11 +1,16 @@
 {% extends 'base.html' %}
-{% block title %}Import BACS — Bank of Apex27{% endblock %}
+{% block title %}Import BACS — {{ source.name }} — Bank of Apex27{% endblock %}
 
 {% block content %}
 <div class="page-header">
-  <h4 class="mb-0"><i class="bi bi-box-arrow-in-down me-2 text-primary"></i>Import BACS from Apex27</h4>
+  <a href="{{ url_for('account_detail', account_id=source.id) }}" class="text-muted text-decoration-none small">
+    <i class="bi bi-chevron-left"></i> {{ source.name }}
+  </a>
+  <h4 class="mb-0 mt-1"><i class="bi bi-box-arrow-in-down me-2 text-primary"></i>Import BACS from Apex27</h4>
   <p class="text-muted small mb-0 mt-1">
-    Upload a BACS payment file exported from Apex27. Transactions are matched to accounts by sort code and account number.
+    Payments are credited to recipient accounts and debited from
+    <strong>{{ source.name }}</strong>
+    (<code>{{ source.sort_code }}</code> <code>{{ source.account_number }}</code>).
   </p>
 </div>
 
@@ -16,7 +21,7 @@
         <h6 class="mb-0 fw-semibold"><i class="bi bi-upload me-2"></i>Upload File</h6>
       </div>
       <div class="card-body">
-        <form method="post" enctype="multipart/form-data">
+        <form method="post" action="{{ url_for('import_bacs', account_id=source.id) }}" enctype="multipart/form-data">
           <div class="mb-3">
             <label class="form-label fw-semibold">BACS Format</label>
             <select class="form-select" name="format" required>
@@ -91,6 +96,16 @@
 
   {% if processed %}
   <div class="col-lg-7">
+    {% if auto_created %}
+    <div class="alert alert-info d-flex align-items-start gap-2 shadow-sm">
+      <i class="bi bi-plus-circle-fill mt-1"></i>
+      <div>
+        <strong>{{ auto_created | length }} account{{ 's' if auto_created | length != 1 }} auto-created:</strong>
+        {{ auto_created | join(', ') }}
+      </div>
+    </div>
+    {% endif %}
+
     <!-- Matched -->
     <div class="card shadow-sm mb-4">
       <div class="card-header bg-white py-3 d-flex align-items-center gap-2">
