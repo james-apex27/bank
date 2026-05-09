@@ -119,12 +119,12 @@
       </p>
       <p class="mb-0">
         The simulator also supports the reverse flow. When Apex27 generates a BACS payment file — for
-        example, to pay out to landlords — you can upload that file here via the
-        <a href="{{ url_for('import_bacs') }}">Import BACS</a> page. The simulator will match each payment
-        row to the corresponding account by sort code and account number and apply the transaction
-        automatically. Any rows that do not match an existing account are shown separately so you can
-        identify gaps in your test setup. Together, these two flows let you verify the complete round-trip:
-        money coming in to Apex27 via statement import, and money going out via BACS export.
+        example, to pay out to landlords — you can open any account and use its Import BACS option to
+        upload the file. The simulator will match each payment row to the corresponding account by sort
+        code and account number and apply the transaction automatically. Any rows that do not match an
+        existing account are shown separately so you can identify gaps in your test setup. Together,
+        these two flows let you verify the complete round-trip: money coming in to Apex27 via statement
+        import, and money going out via BACS export.
       </p>
     </div>
   </div>
