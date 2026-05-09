@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Bank of Apex27{% endblock %}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <style>
+    body { background: #f0f2f5; }
+    .navbar { background: #0a2d4d !important; }
+    .navbar-brand { font-weight: 700; letter-spacing: .5px; font-size: 1.1rem; }
+    .nav-link { color: rgba(255,255,255,.75) !important; }
+    .nav-link:hover, .nav-link.active { color: #fff !important; }
+    .card { border: none; border-radius: 10px; }
+    .card-header { border-radius: 10px 10px 0 0 !important; }
+    .account-card { transition: box-shadow .15s, transform .15s; cursor: default; }
+    .account-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,.12) !important; transform: translateY(-2px); }
+    .badge-barclays { background: #00aeef; }
+    .badge-natwest { background: #5a2d82; }
+    .badge-sage { background: #00875a; }
+    .amount-credit { color: #198754; font-weight: 600; }
+    .amount-debit  { color: #dc3545; font-weight: 600; }
+    .balance-positive { color: #198754; }
+    .balance-negative { color: #dc3545; }
+    .page-header { border-bottom: 2px solid #dee2e6; padding-bottom: .75rem; margin-bottom: 1.5rem; }
+    .table th { font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; color: #6c757d; }
+    .table td { vertical-align: middle; }
+    code { background: #e9ecef; padding: 1px 5px; border-radius: 4px; font-size: .9em; }
+    .copy-target { cursor: pointer; }
+    .copy-target:hover { background: #d0d7de; }
+    .copy-icon { cursor: pointer; font-size: .8em; opacity: .45; transition: opacity .15s, color .15s; }
+    .copy-icon:hover { opacity: 1; }
+  </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark">
+  <div class="container-fluid px-4">
+    <a class="navbar-brand" href="{{ url_for('dashboard') }}">
+      <i class="bi bi-bank2 me-2"></i>Bank of Apex27
+    </a>
+    <div class="d-flex gap-3 ms-auto">
+      <a class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}"
+         href="{{ url_for('dashboard') }}">
+        <i class="bi bi-grid-3x3-gap-fill me-1"></i>Accounts
+      </a>
+      <a class="nav-link {% if request.endpoint == 'import_bacs' %}active{% endif %}"
+         href="{{ url_for('import_bacs') }}">
+        <i class="bi bi-box-arrow-in-down me-1"></i>Import BACS
+      </a>
+    </div>
+  </div>
+</nav>
+
+<div class="container-fluid px-4 mt-4" style="max-width: 1400px;">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert">
+          {{ message | safe }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  {% block content %}{% endblock %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  document.addEventListener('click', function (e) {
+    const target = e.target.closest('.copy-target, .copy-icon');
+    if (!target) return;
+    const value = target.dataset.value;
+    if (!value) return;
+    navigator.clipboard.writeText(value).then(function () {
+      const group = target.closest('.copy-group');
+      const icon = group ? group.querySelector('.copy-icon') : null;
+      if (icon) {
+        icon.classList.replace('bi-clipboard', 'bi-check-lg');
+        icon.classList.add('text-success');
+        icon.style.opacity = '1';
+        setTimeout(function () {
+          icon.classList.replace('bi-check-lg', 'bi-clipboard');
+          icon.classList.remove('text-success');
+          icon.style.opacity = '';
+        }, 1500);
+      }
+    });
+  });
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

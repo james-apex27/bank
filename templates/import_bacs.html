@@ -1,0 +1,176 @@
+{% extends 'base.html' %}
+{% block title %}Import BACS — Bank of Apex27{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h4 class="mb-0"><i class="bi bi-box-arrow-in-down me-2 text-primary"></i>Import BACS from Apex27</h4>
+  <p class="text-muted small mb-0 mt-1">
+    Upload a BACS payment file exported from Apex27. Transactions are matched to accounts by sort code and account number.
+  </p>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-5">
+    <div class="card shadow-sm">
+      <div class="card-header bg-white py-3">
+        <h6 class="mb-0 fw-semibold"><i class="bi bi-upload me-2"></i>Upload File</h6>
+      </div>
+      <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">BACS Format</label>
+            <select class="form-select" name="format" required>
+              <option value="">— Select format —</option>
+              <option value="barclays" {% if bacs_format == 'barclays' %}selected{% endif %}>Barclays</option>
+              <option value="natwest"  {% if bacs_format == 'natwest'  %}selected{% endif %}>NatWest</option>
+              <option value="sage"     {% if bacs_format == 'sage'     %}selected{% endif %}>Sage</option>
+            </select>
+            <div class="form-text">Match this to the export format configured in Apex27.</div>
+          </div>
+          <div class="mb-4">
+            <label class="form-label fw-semibold">BACS File (CSV)</label>
+            <input type="file" class="form-control" name="file" accept=".csv,.txt" required>
+          </div>
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="bi bi-cloud-upload me-1"></i>Import
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Format reference -->
+    <div class="card shadow-sm mt-4">
+      <div class="card-header bg-white py-3">
+        <h6 class="mb-0 fw-semibold"><i class="bi bi-info-circle me-2"></i>Expected Column Headers</h6>
+      </div>
+      <div class="card-body p-0">
+        <div class="accordion accordion-flush" id="formatAccordion">
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed py-2" type="button"
+                      data-bs-toggle="collapse" data-bs-target="#fBarclays">
+                <span class="badge badge-barclays text-white me-2">Barclays</span>
+              </button>
+            </h2>
+            <div id="fBarclays" class="accordion-collapse collapse" data-bs-parent="#formatAccordion">
+              <div class="accordion-body py-2">
+                <code class="d-block small">Beneficiary Name, Sort Code, Account Number, Amount, Reference, Payment Date</code>
+              </div>
+            </div>
+          </div>
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed py-2" type="button"
+                      data-bs-toggle="collapse" data-bs-target="#fNatwest">
+                <span class="badge badge-natwest text-white me-2">NatWest</span>
+              </button>
+            </h2>
+            <div id="fNatwest" class="accordion-collapse collapse" data-bs-parent="#formatAccordion">
+              <div class="accordion-body py-2">
+                <code class="d-block small">Destination Sort Code, Destination Account Number, Beneficiary Name, Amount, Reference, Payment Date</code>
+              </div>
+            </div>
+          </div>
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed py-2" type="button"
+                      data-bs-toggle="collapse" data-bs-target="#fSage">
+                <span class="badge badge-sage text-white me-2">Sage</span>
+              </button>
+            </h2>
+            <div id="fSage" class="accordion-collapse collapse" data-bs-parent="#formatAccordion">
+              <div class="accordion-body py-2">
+                <code class="d-block small">Destination Sort Code, Destination Account Number, Account Name, Amount, Reference</code>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if processed %}
+  <div class="col-lg-7">
+    <!-- Matched -->
+    <div class="card shadow-sm mb-4">
+      <div class="card-header bg-white py-3 d-flex align-items-center gap-2">
+        <h6 class="mb-0 fw-semibold"><i class="bi bi-check-circle-fill text-success me-1"></i>Applied to Accounts</h6>
+        <span class="badge bg-success rounded-pill">{{ matched | length }}</span>
+      </div>
+      {% if matched %}
+      <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Date</th>
+              <th>Account</th>
+              <th>Beneficiary</th>
+              <th>Reference</th>
+              <th class="text-end">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for t in matched %}
+            <tr>
+              <td class="text-nowrap">{{ t.date }}</td>
+              <td>
+                <span class="fw-semibold">{{ t.account_name }}</span><br>
+                <span class="text-muted small"><code>{{ t.sort_code }}</code> &nbsp; <code>{{ t.account_number }}</code></span>
+              </td>
+              <td>{{ t.beneficiary_name }}</td>
+              <td class="text-muted small">{{ t.reference }}</td>
+              <td class="text-end amount-credit text-nowrap">+£{{ "%.2f" | format(t.amount) }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="card-body text-muted small">No transactions were matched to existing accounts.</div>
+      {% endif %}
+    </div>
+
+    <!-- Unmatched -->
+    {% if unmatched %}
+    <div class="card shadow-sm border-warning border-opacity-50">
+      <div class="card-header bg-white py-3 d-flex align-items-center gap-2">
+        <h6 class="mb-0 fw-semibold">
+          <i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>Unmatched Rows
+        </h6>
+        <span class="badge bg-warning text-dark rounded-pill">{{ unmatched | length }}</span>
+      </div>
+      <div class="card-body pb-0">
+        <p class="text-muted small mb-3">
+          No account found with a matching sort code and account number. Create the account in the simulator to apply these.
+        </p>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Sort Code</th>
+              <th>Account No.</th>
+              <th>Beneficiary</th>
+              <th>Reference</th>
+              <th class="text-end">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for t in unmatched %}
+            <tr>
+              <td><code>{{ t.sort_code }}</code></td>
+              <td><code>{{ t.account_number }}</code></td>
+              <td>{{ t.beneficiary_name }}</td>
+              <td class="text-muted small">{{ t.reference }}</td>
+              <td class="text-end text-nowrap">£{{ "%.2f" | format(t.amount) }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
