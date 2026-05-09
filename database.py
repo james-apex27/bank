@@ -1,6 +1,7 @@
 import sqlite3
 import random
 from datetime import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
 
 DB_PATH = 'bank.db'
 
@@ -15,13 +16,23 @@ def get_db():
 def init_db():
     conn = get_db()
     conn.executescript('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            is_admin INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL
+        );
+
         CREATE TABLE IF NOT EXISTS accounts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
             name TEXT NOT NULL,
             sort_code TEXT NOT NULL UNIQUE,
             account_number TEXT NOT NULL UNIQUE,
             bank_type TEXT NOT NULL,
-            created_at TEXT NOT NULL
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
 
         CREATE TABLE IF NOT EXISTS transactions (
@@ -38,14 +49,88 @@ def init_db():
         );
     ''')
     conn.commit()
-    # Migrate existing DB if exported_at column is missing
-    try:
-        conn.execute('ALTER TABLE transactions ADD COLUMN exported_at TEXT')
+
+    for migration in [
+        'ALTER TABLE transactions ADD COLUMN exported_at TEXT',
+        'ALTER TABLE accounts ADD COLUMN user_id INTEGER',
+    ]:
+        try:
+            conn.execute(migration)
+            conn.commit()
+        except Exception:
+            pass
+
+    if not conn.execute("SELECT id FROM users WHERE email = 'james@apex27.co.uk'").fetchone():
+        conn.execute(
+            'INSERT INTO users (email, password_hash, is_admin, created_at) VALUES (?, ?, 1, ?)',
+            ('james@apex27.co.uk', generate_password_hash('apex27bank!'), datetime.now().isoformat())
+        )
         conn.commit()
-    except Exception:
-        pass
+
+    admin = conn.execute("SELECT id FROM users WHERE email = 'james@apex27.co.uk'").fetchone()
+    if admin:
+        conn.execute('UPDATE accounts SET user_id = ? WHERE user_id IS NULL', (admin['id'],))
+        conn.commit()
+
     conn.close()
 
+
+# --- User functions ---
+
+def get_user_by_email(email):
+    conn = get_db()
+    row = conn.execute('SELECT * FROM users WHERE email = ?', (email.lower().strip(),)).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def get_user_by_id(user_id):
+    conn = get_db()
+    row = conn.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def authenticate_user(email, password):
+    user = get_user_by_email(email)
+    if user and check_password_hash(user['password_hash'], password):
+        return user
+    return None
+
+
+def get_all_users():
+    conn = get_db()
+    rows = conn.execute('''
+        SELECT u.*, COUNT(a.id) AS account_count
+        FROM users u
+        LEFT JOIN accounts a ON a.user_id = u.id
+        GROUP BY u.id
+        ORDER BY u.email
+    ''').fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def create_user(email, password, is_admin=False):
+    conn = get_db()
+    conn.execute(
+        'INSERT INTO users (email, password_hash, is_admin, created_at) VALUES (?, ?, ?, ?)',
+        (email.lower().strip(), generate_password_hash(password), 1 if is_admin else 0, datetime.now().isoformat())
+    )
+    conn.commit()
+    user_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+    conn.close()
+    return user_id
+
+
+def delete_user(user_id):
+    conn = get_db()
+    conn.execute('DELETE FROM users WHERE id = ?', (user_id,))
+    conn.commit()
+    conn.close()
+
+
+# --- Account functions ---
 
 def _random_sort_code(conn):
     while True:
@@ -61,7 +146,7 @@ def _random_account_number(conn):
             return an
 
 
-def get_accounts():
+def get_accounts(user_id):
     conn = get_db()
     rows = conn.execute('''
         SELECT a.*,
@@ -70,9 +155,10 @@ def get_accounts():
                MAX(t.date) AS last_transaction_iso
         FROM accounts a
         LEFT JOIN transactions t ON t.account_id = a.id
+        WHERE a.user_id = ?
         GROUP BY a.id
         ORDER BY a.name
-    ''').fetchall()
+    ''', (user_id,)).fetchall()
     conn.close()
     accounts = []
     for row in rows:
@@ -95,13 +181,15 @@ def get_account(account_id):
     return dict(row) if row else None
 
 
-def create_account(name, bank_type):
+def create_account(name, bank_type, user_id, sort_code=None, account_number=None):
     conn = get_db()
-    sort_code = _random_sort_code(conn)
-    account_number = _random_account_number(conn)
+    if sort_code is None:
+        sort_code = _random_sort_code(conn)
+    if account_number is None:
+        account_number = _random_account_number(conn)
     conn.execute(
-        'INSERT INTO accounts (name, sort_code, account_number, bank_type, created_at) VALUES (?, ?, ?, ?, ?)',
-        (name, sort_code, account_number, bank_type, datetime.now().isoformat())
+        'INSERT INTO accounts (user_id, name, sort_code, account_number, bank_type, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+        (user_id, name, sort_code, account_number, bank_type, datetime.now().isoformat())
     )
     conn.commit()
     account_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
@@ -115,6 +203,28 @@ def delete_account(account_id):
     conn.commit()
     conn.close()
 
+
+def find_account_by_details(sort_code, account_number, user_id):
+    conn = get_db()
+    row = conn.execute(
+        'SELECT * FROM accounts WHERE sort_code = ? AND account_number = ? AND user_id = ?',
+        (sort_code.strip(), account_number.strip(), user_id)
+    ).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def reset_all_transactions(user_id):
+    conn = get_db()
+    conn.execute('''
+        DELETE FROM transactions
+        WHERE account_id IN (SELECT id FROM accounts WHERE user_id = ?)
+    ''', (user_id,))
+    conn.commit()
+    conn.close()
+
+
+# --- Transaction functions ---
 
 def get_transactions_with_balance(account_id, date_from=None, date_to=None):
     conn = get_db()
@@ -154,7 +264,6 @@ def get_transactions_with_balance(account_id, date_from=None, date_to=None):
 
 
 def get_unexported_transactions_with_balance(account_id):
-    """Returns only unexported transactions, but running_balance includes all prior transactions."""
     conn = get_db()
     all_rows = conn.execute(
         'SELECT * FROM transactions WHERE account_id = ? ORDER BY date ASC, id ASC',
@@ -227,13 +336,3 @@ def delete_transaction(transaction_id):
     conn.execute('DELETE FROM transactions WHERE id = ?', (transaction_id,))
     conn.commit()
     conn.close()
-
-
-def find_account_by_details(sort_code, account_number):
-    conn = get_db()
-    row = conn.execute(
-        'SELECT * FROM accounts WHERE sort_code = ? AND account_number = ?',
-        (sort_code.strip(), account_number.strip())
-    ).fetchone()
-    conn.close()
-    return dict(row) if row else None

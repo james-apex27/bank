@@ -39,15 +39,25 @@
     <a class="navbar-brand" href="{{ url_for('dashboard') }}">
       <i class="bi bi-bank2 me-2"></i>Bank of Apex27
     </a>
-    <div class="d-flex gap-3 ms-auto">
+    <div class="d-flex gap-3 ms-auto align-items-center">
       <a class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}"
          href="{{ url_for('dashboard') }}">
         <i class="bi bi-grid-3x3-gap-fill me-1"></i>Accounts
       </a>
-      <a class="nav-link {% if request.endpoint == 'import_bacs' %}active{% endif %}"
-         href="{{ url_for('import_bacs') }}">
-        <i class="bi bi-box-arrow-in-down me-1"></i>Import BACS
+      {% if session.is_admin %}
+      <a class="nav-link {% if request.endpoint == 'admin_users' %}active{% endif %}"
+         href="{{ url_for('admin_users') }}">
+        <i class="bi bi-people me-1"></i>Users
       </a>
+      {% endif %}
+      {% if session.user_email %}
+      <span class="text-white-50 small d-none d-lg-inline">{{ session.user_email }}</span>
+      <form method="post" action="{{ url_for('logout') }}" class="mb-0">
+        <button type="submit" class="btn btn-sm btn-outline-light">
+          <i class="bi bi-box-arrow-right me-1"></i>Sign out
+        </button>
+      </form>
+      {% endif %}
     </div>
   </div>
 </nav>
