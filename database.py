@@ -56,6 +56,7 @@ def init_db():
     for migration in [
         'ALTER TABLE transactions ADD COLUMN exported_at TEXT',
         'ALTER TABLE accounts ADD COLUMN user_id INTEGER',
+        'ALTER TABLE accounts ADD COLUMN statement_number INTEGER NOT NULL DEFAULT 0',
     ]:
         try:
             conn.execute(migration)
@@ -215,6 +216,26 @@ def find_account_by_details(sort_code, account_number, user_id):
     ).fetchone()
     conn.close()
     return dict(row) if row else None
+
+
+def increment_statement_number(account_id):
+    """Increment the statement number and return the new value."""
+    conn = get_db()
+    conn.execute(
+        'UPDATE accounts SET statement_number = statement_number + 1 WHERE id = ?',
+        (account_id,)
+    )
+    conn.commit()
+    row = conn.execute('SELECT statement_number FROM accounts WHERE id = ?', (account_id,)).fetchone()
+    conn.close()
+    return row['statement_number']
+
+
+def reset_statement_number(account_id):
+    conn = get_db()
+    conn.execute('UPDATE accounts SET statement_number = 0 WHERE id = ?', (account_id,))
+    conn.commit()
+    conn.close()
 
 
 def reset_all_transactions(user_id):

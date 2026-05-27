@@ -156,6 +156,20 @@
         {% endif %}
       </div>
       <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <span class="text-muted small">
+            Next statement number:
+            <strong class="text-dark fs-6">#{{ "%03d" | format(account.statement_number + 1) }}</strong>
+          </span>
+          <form method="post"
+                action="{{ url_for('reset_statement_number', account_id=account.id) }}"
+                onsubmit="return confirm('Reset statement number back to 0?')">
+            <button type="submit" class="btn btn-link btn-sm text-muted p-0"
+                    title="Reset statement number">
+              <i class="bi bi-arrow-counterclockwise me-1"></i>Reset
+            </button>
+          </form>
+        </div>
         <p class="text-muted small mb-3">
           Exports all <strong>un-exported</strong> transactions as a
           <strong>{{ account.bank_type | title }}</strong>-format CSV for Apex27 to import.

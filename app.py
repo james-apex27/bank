@@ -170,22 +170,33 @@ def export_statement(account_id):
     if not transactions:
         flash('No new transactions to export — all are already marked as exported.', 'warning')
         return redirect(url_for('account_detail', account_id=account_id))
+    stmt_num = db.increment_statement_number(account_id)
+    stmt_label = f"{stmt_num:03d}"
     bank_type = account['bank_type']
     if bank_type == 'barclays':
         content = exporters.export_barclays(account, transactions)
-        filename = f"barclays_statement_{account['account_number']}.csv"
+        filename = f"barclays_{account['account_number']}_stmt{stmt_label}.csv"
     elif bank_type == 'natwest':
         content = exporters.export_natwest(account, transactions)
-        filename = f"natwest_statement_{account['account_number']}.csv"
+        filename = f"natwest_{account['account_number']}_stmt{stmt_label}.csv"
     else:
         content = exporters.export_sage(account, transactions)
-        filename = f"sage_statement_{account['account_number']}.csv"
+        filename = f"sage_{account['account_number']}_stmt{stmt_label}.csv"
     ids = [t['id'] for t in transactions]
     db.mark_transactions_exported(ids)
     response = make_response(content)
     response.headers['Content-Type'] = 'text/csv; charset=utf-8'
     response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response
+
+
+@app.route('/account/<int:account_id>/reset-statement-number', methods=['POST'])
+@login_required
+def reset_statement_number(account_id):
+    _own_account(account_id)
+    db.reset_statement_number(account_id)
+    flash('Statement number reset to 0.', 'success')
+    return redirect(url_for('account_detail', account_id=account_id))
 
 
 @app.route('/account/<int:account_id>/delete', methods=['POST'])
