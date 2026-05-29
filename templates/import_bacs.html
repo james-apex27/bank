@@ -26,9 +26,10 @@
             <label class="form-label fw-semibold">BACS Format</label>
             <select class="form-select" name="format" required>
               <option value="">— Select format —</option>
-              <option value="barclays" {% if bacs_format == 'barclays' %}selected{% endif %}>Barclays</option>
-              <option value="natwest"  {% if bacs_format == 'natwest'  %}selected{% endif %}>NatWest</option>
-              <option value="sage"     {% if bacs_format == 'sage'     %}selected{% endif %}>Sage</option>
+              <option value="barclays"     {% if bacs_format == 'barclays'     %}selected{% endif %}>Barclays</option>
+              <option value="barclays_bacs" {% if bacs_format == 'barclays_bacs' %}selected{% endif %}>Barclays BACS (payment file)</option>
+              <option value="natwest"      {% if bacs_format == 'natwest'      %}selected{% endif %}>NatWest</option>
+              <option value="sage"         {% if bacs_format == 'sage'         %}selected{% endif %}>Sage</option>
             </select>
             <div class="form-text">Match this to the export format configured in Apex27.</div>
           </div>
@@ -60,6 +61,20 @@
             <div id="fBarclays" class="accordion-collapse collapse" data-bs-parent="#formatAccordion">
               <div class="accordion-body py-2">
                 <code class="d-block small">Beneficiary Name, Sort Code, Account Number, Amount, Reference, Payment Date</code>
+              </div>
+            </div>
+          </div>
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed py-2" type="button"
+                      data-bs-toggle="collapse" data-bs-target="#fBarclaysBacs">
+                <span class="badge badge-barclays text-white me-2">Barclays BACS</span>
+              </button>
+            </h2>
+            <div id="fBarclaysBacs" class="accordion-collapse collapse" data-bs-parent="#formatAccordion">
+              <div class="accordion-body py-2">
+                <code class="d-block small">Sort Code, Account Name, Account Number, Amount, Reference, Transaction Code, /</code>
+                <p class="text-muted small mt-2 mb-0">Headerless positional format. Sort code may be 6 digits (no dashes) or formatted. Date defaults to today.</p>
               </div>
             </div>
           </div>

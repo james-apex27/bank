@@ -224,7 +224,7 @@ def import_bacs(account_id):
     if not file or not file.filename:
         flash('Please select a file to import.', 'danger')
         return render_template('import_bacs.html', source=source)
-    if bacs_format not in ('barclays', 'natwest', 'sage'):
+    if bacs_format not in ('barclays', 'natwest', 'sage', 'barclays_bacs'):
         flash('Please select a BACS format.', 'danger')
         return render_template('import_bacs.html', source=source)
 
@@ -234,6 +234,8 @@ def import_bacs(account_id):
         parsed = importers.import_barclays(content)
     elif bacs_format == 'natwest':
         parsed = importers.import_natwest(content)
+    elif bacs_format == 'barclays_bacs':
+        parsed = importers.import_barclays_bacs(content)
     else:
         parsed = importers.import_sage(content)
 
@@ -260,15 +262,13 @@ def import_bacs(account_id):
             )
             matched.append({**t, 'account_name': account['name']})
 
-    if matched:
-        total = sum(t['amount'] for t in matched)
-        n = len(matched)
+    for t in matched:
         db.add_transaction(
             account_id,
-            matched[0]['date'],
-            f"BACS run — {n} payment{'s' if n != 1 else ''}",
-            -total,
-            '',
+            t['date'],
+            f"BACS payment — {t['beneficiary_name']}" if t['beneficiary_name'] else "BACS payment",
+            -t['amount'],
+            t['reference'],
             'BACS',
         )
 
