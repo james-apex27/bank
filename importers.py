@@ -82,6 +82,36 @@ def import_natwest(file_content):
     return transactions
 
 
+def import_barclays_bacs(file_content):
+    transactions = []
+    for line in file_content.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        parts = [p.strip() for p in line.split(',')]
+        if len(parts) < 4:
+            continue
+        raw_sc = parts[0].replace('-', '')
+        if len(raw_sc) == 6:
+            sort_code = f"{raw_sc[0:2]}-{raw_sc[2:4]}-{raw_sc[4:6]}"
+        else:
+            sort_code = raw_sc
+        name = parts[1]
+        account_number = parts[2]
+        amount = _parse_amount(parts[3])
+        reference = parts[4] if len(parts) > 4 else ''
+        transactions.append({
+            'sort_code': sort_code,
+            'account_number': account_number,
+            'beneficiary_name': name,
+            'amount': amount,
+            'reference': reference,
+            'date': datetime.now().strftime('%d/%m/%Y'),
+            'description': f"BACS from Apex27{' — ' + name if name else ''}",
+        })
+    return transactions
+
+
 def import_sage(file_content):
     transactions = []
     for row in _parse_rows(file_content):
