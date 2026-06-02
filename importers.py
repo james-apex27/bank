@@ -98,7 +98,10 @@ def import_barclays_bacs(file_content):
             sort_code = raw_sc
         name = parts[1]
         account_number = parts[2]
-        amount = _parse_amount(parts[3])
+        raw_amount = parts[3].strip()
+        amount = _parse_amount(raw_amount)
+        if '.' not in raw_amount:
+            amount = amount / 100
         reference = parts[4] if len(parts) > 4 else ''
         transactions.append({
             'sort_code': sort_code,
